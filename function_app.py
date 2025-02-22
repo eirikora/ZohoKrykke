@@ -2,6 +2,8 @@ import azure.functions as func
 import logging
 import re
 import os
+from datetime import datetime
+import openai
 import tempfile
 import json
 import base64
@@ -164,5 +166,70 @@ def Word2Text(req: func.HttpRequest) -> func.HttpResponse:
         logging.info('ERROR: Did not find a Word document to convert in request body!')
         return func.HttpResponse(
              "ERROR: Could not find a file in doc/docx format that we can convert. File received was: " + file_name,
+             status_code=400
+        )
+    
+
+@app.route(route="MakeVectorstore", auth_level=func.AuthLevel.ANONYMOUS)
+def MakeVectorstore(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('MakeVectorstore trigger function processed a request.')
+
+    openai_key = req.params.get('openai_key')
+    if not openai_key:
+        try:
+            req_body = req.get_json()
+        except ValueError:
+            pass
+        else:
+            openai_key = req_body.get('openai_key')
+
+    vstore_name = req.params.get('vstore_name')
+    if not vstore_name:
+        try:
+            req_body = req.get_json()
+        except ValueError:
+            pass
+        else:
+            vstore_name = req_body.get('vstore_name')
+
+    if openai_key and vstore_name:
+        logging.info("Connecting to OpenAI with supplied key.")
+        try:
+            OpenAIclient = openai.OpenAI(api_key=openai_key)
+        except Exception as e:
+            return func.HttpResponse( f"Failed to connect to OpenAI with supplied key: {e}",
+             status_code=400
+            )
+        logging.info(f'Creating a vector store. {vstore_name}')
+        # Get the current date and time
+        current_datetime = datetime.now()
+        formatted_datetime = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            vector_store = OpenAIclient.beta.vector_stores.create(
+                name=f"{vstore_name} {formatted_datetime}"
+            )
+        except Exception as e:
+            # Try to extract the error message from the response if available
+            try:
+                error_detail = e.response.json().get('error', {}).get('message', '')
+            except Exception:
+                error_detail = ''
+            # Fallback to the full exception string if no nested error message is found
+            if not error_detail:
+                error_detail = str(e)
+
+            return func.HttpResponse( f"Failed to create vector store with message: {error_detail}",
+             status_code=400
+            )
+        logging.info(f"Created vector store with ID:{vector_store.id}")
+        return_value = {
+            "status": vector_store.status,
+            "id": vector_store.id,
+            "name": vector_store.name
+        }
+        return func.HttpResponse(json.dumps(return_value), mimetype="application/json", status_code=200)
+    else:
+        return func.HttpResponse(
+             "Please pass a valid openai_key and vstore_name in the request parameters or body",
              status_code=400
         )
