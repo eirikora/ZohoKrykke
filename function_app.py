@@ -246,8 +246,8 @@ def MakeVectorstore(req: func.HttpRequest) -> func.HttpResponse:
 @app.route(route="UpsertTextdocVectorstore", auth_level=func.AuthLevel.ANONYMOUS)
 def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('UpsertTextdocVectorstore trigger function processed a request.')
-    logging.info(f'REQUEST PARAMS:{req.params}')
-    logging.info(f'REQUEST FILES:{req.files.keys()}')
+    # logging.info(f'REQUEST PARAMS:{req.params}')
+    # logging.info(f'REQUEST FILES:{req.files.keys()}')
 
 
     encrypted_openai_key = req.params.get('openai_key')
@@ -258,7 +258,7 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
             pass
         else:
             encrypted_openai_key = req_body.get('openai_key')
-    logging.info(f'GOT openai key:{encrypted_openai_key}')
+    # logging.info(f'GOT openai key:{encrypted_openai_key}')
     openai_key = decrypt_word(encrypted_openai_key)
 
     vstore_id = req.params.get('vstore_id')
@@ -278,7 +278,7 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
         except ValueError:
             pass
 
-    logging.info(f'GOT file_name:{file_name}')
+    # logging.info(f'GOT file_name:{file_name}')
 
     file_content = b''
     file_content = req.params.get('file_content')
@@ -394,7 +394,7 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
 @app.route(route="UpdateAssistantVectorstore", auth_level=func.AuthLevel.ANONYMOUS)
 def UpdateAssistantVectorstore(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('UpdateAssistantVectorstore trigger function processed a request.')
-    logging.info(f'REQUEST PARAMS:{req.params}')
+    # logging.info(f'REQUEST PARAMS:{req.params}')
 
     encrypted_openai_key = req.params.get('openai_key')
     if not encrypted_openai_key:
