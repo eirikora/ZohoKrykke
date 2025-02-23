@@ -12,6 +12,10 @@ import mammoth
 from bs4 import BeautifulSoup
 import quopri
 from docx import Document
+from encryption import encrypt_word, decrypt_word
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
@@ -29,7 +33,9 @@ def http_test(req: func.HttpRequest) -> func.HttpResponse:
             name = req_body.get('name')
 
     if name:
-        return func.HttpResponse(f"Hello, {name}. This HTTP triggered function executed successfully.")
+        encrypted_name = encrypt_word(name)
+        decrypted_name = decrypt_word(encrypted_name)
+        return func.HttpResponse(f"Hello, {decrypted_name}. Your name encrypted was {encrypted_name}. This HTTP triggered function executed successfully.")
     else:
         return func.HttpResponse(
              "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.",
