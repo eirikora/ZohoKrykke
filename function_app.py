@@ -2,6 +2,7 @@ import azure.functions as func
 import logging
 import re
 import os
+import io
 from datetime import datetime
 import openai
 import tempfile
@@ -326,11 +327,29 @@ def AddTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
              status_code=400
             )
         logging.info(f"Found vector store with ID:{vector_store.id}")
+
+        # Opprett et fil-lignende objekt i minnet
+        file_object = io.BytesIO(file_content.encode('utf-8'))
+        file_object.name = file_name  # Sett filnavnet
+
+        # Last filen inn til OpenAI og få file_id
+        OpenAIfile = OpenAIclient.files.create(
+            file=file_object,
+            purpose='assistants'
+        )
+
+        # Last filen videre inn i Vectorstore
+        vector_store_file = OpenAIclient.beta.vector_stores.files.create(
+            vector_store_id=vector_store.id,
+            file_id=OpenAIfile.id
+        )
+
         return_value = {
-            "status": vector_store.status,
-            "id": vector_store.id,
-            "name": vector_store.name,
+            "status": vector_store_file.status,
+            "vectorstore_id": vector_store.id,
+            "vectorstore_name": vector_store.name,
             "file_name": file_name,
+            "file_id": OpenAIfile.id,
             "file_content": file_content
         }
         return func.HttpResponse(json.dumps(return_value), mimetype="application/json", status_code=200)
