@@ -236,9 +236,9 @@ def MakeVectorstore(req: func.HttpRequest) -> func.HttpResponse:
         )
     
 
-@app.route(route="AddTextdocVectorstore", auth_level=func.AuthLevel.ANONYMOUS)
-def AddTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info('AddTextdocVectorstore trigger function processed a request.')
+@app.route(route="UpsertTextdocVectorstore", auth_level=func.AuthLevel.ANONYMOUS)
+def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('UpsertTextdocVectorstore trigger function processed a request.')
     logging.info(f'REQUEST PARAMS:{req.params}')
     logging.info(f'REQUEST FILES:{req.files.keys()}')
 
@@ -326,7 +326,27 @@ def AddTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
             return func.HttpResponse( f"Failed to identify vector store {vstore_id} with message: {error_detail}",
              status_code=400
             )
-        logging.info(f"Adding file to vector store with ID:{vector_store.id}")
+        
+        logging.info(f"Checking if the file already exists and removing it if so.")
+        allfiles = OpenAIclient.files.list()
+        for openaifile in allfiles.data:
+            if openaifile.filename == file_name:
+                logging.info(f" - Found old file {file_name} with id {openaifile.id}, so removing it from Vectorstore.")
+                # Remove it from the vector store
+                try:
+                    deleted_vector_store_file = OpenAIclient.beta.vector_stores.files.delete(
+                        vector_store_id=vector_store.id,
+                        file_id=openaifile.id
+                    )
+                except Exception:
+                    pass
+                # Delete the old uploaded file
+                try:
+                    deleted_file = OpenAIclient.files.delete(openaifile.id)
+                except Exception:
+                    pass
+
+        logging.info(f"Adding new file to vector store with ID:{vector_store.id}")
 
         # Opprett et fil-lignende objekt i minnet
         file_object = io.BytesIO(file_content.encode('utf-8'))
