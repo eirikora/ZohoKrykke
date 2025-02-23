@@ -276,7 +276,7 @@ def AddTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
             logging.info('Getting the body...')
             req_body = req.get_body()
             req_body_str = req_body.decode('utf-8')
-            logging.info(f'Looking at:{req_body_str}')
+            #logging.info(f'Looking at:{req_body_str}')
             if req_body_str.startswith('{'):
                 logging.info('Getting the json body...')
                 json_data = json.loads(req_body, strict=False)
@@ -326,7 +326,7 @@ def AddTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
             return func.HttpResponse( f"Failed to identify vector store {vstore_id} with message: {error_detail}",
              status_code=400
             )
-        logging.info(f"Found vector store with ID:{vector_store.id}")
+        logging.info(f"Adding file to vector store with ID:{vector_store.id}")
 
         # Opprett et fil-lignende objekt i minnet
         file_object = io.BytesIO(file_content.encode('utf-8'))
@@ -356,5 +356,76 @@ def AddTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
     else:
         return func.HttpResponse(
              "Please pass a valid openai_key and vstore_name in the request parameters or body",
+             status_code=400
+        )
+
+@app.route(route="UpdateAssistantVectorstore", auth_level=func.AuthLevel.ANONYMOUS)
+def UpdateAssistantVectorstore(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('UpdateAssistantVectorstore trigger function processed a request.')
+    logging.info(f'REQUEST PARAMS:{req.params}')
+
+    openai_key = req.params.get('openai_key')
+    if not openai_key:
+        try:
+            req_body = req.get_json()
+        except ValueError:
+            pass
+        else:
+            openai_key = req_body.get('openai_key')
+
+    assistant_id = req.params.get('assistant_id')
+    if not assistant_id:
+        try:
+            req_body = req.get_json()
+        except ValueError:
+            pass
+        else:
+            assistant_id = req_body.get('assistant_id')
+
+    vstore_id = req.params.get('vstore_id')
+    if not vstore_id:
+        try:
+            req_body = req.get_json()
+        except ValueError:
+            pass
+        else:
+            vstore_id = req_body.get('vstore_id')
+
+    if openai_key and assistant_id and vstore_id:
+
+        logging.info("Connecting to OpenAI with supplied key.")
+        try:
+            OpenAIclient = openai.OpenAI(api_key=openai_key)
+        except Exception as e:
+            return func.HttpResponse( f"Failed to connect to OpenAI with supplied key: {e}",
+             status_code=400
+            )
+        
+        # Oppdater assistenten med den nye Vector Store
+        try:
+            updated_assistant = OpenAIclient.beta.assistants.update(
+                assistant_id=assistant_id,
+                tool_resources={
+                    "file_search": {
+                        "vector_store_ids": [vstore_id]
+                    }
+                }
+            )
+        except Exception as e:
+            return func.HttpResponse( f"Failed to replace vectorstore to id {vstore_id} for assistant {assistant_id} with supplied key: {e}",
+                status_code=400
+            )
+        
+        return_value = {
+            "operation": f"Assistant {updated_assistant.id} is now using vectorstore {vstore_id}.",
+            "status": "success",
+            "assistant_id": updated_assistant.id,
+            "vectorstore_id": vstore_id
+        }
+        return func.HttpResponse(json.dumps(return_value), mimetype="application/json", status_code=200)
+
+    else:
+        return func.HttpResponse(
+             "Please pass a valid openai_key, assistant_id and vstore_name in the request parameters.",
              status_code=400
         )
