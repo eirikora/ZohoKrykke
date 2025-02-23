@@ -250,14 +250,15 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
     logging.info(f'REQUEST FILES:{req.files.keys()}')
 
 
-    openai_key = req.params.get('openai_key')
-    if not openai_key:
+    encrypted_openai_key = req.params.get('openai_key')
+    if not encrypted_openai_key:
         try:
             req_body = req.get_json()
         except ValueError:
             pass
         else:
-            openai_key = req_body.get('openai_key')
+            encrypted_openai_key = req_body.get('openai_key')
+    openai_key = decrypt_word(encrypted_openai_key)
 
     vstore_id = req.params.get('vstore_id')
     if not vstore_id:
@@ -391,14 +392,15 @@ def UpdateAssistantVectorstore(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('UpdateAssistantVectorstore trigger function processed a request.')
     logging.info(f'REQUEST PARAMS:{req.params}')
 
-    openai_key = req.params.get('openai_key')
-    if not openai_key:
+    encrypted_openai_key = req.params.get('openai_key')
+    if not encrypted_openai_key:
         try:
             req_body = req.get_json()
         except ValueError:
             pass
         else:
-            openai_key = req_body.get('openai_key')
+            encrypted_openai_key = req_body.get('openai_key')
+    openai_key = decrypt_word(encrypted_openai_key)
 
     assistant_id = req.params.get('assistant_id')
     if not assistant_id:
