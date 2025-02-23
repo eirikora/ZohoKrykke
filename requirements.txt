@@ -7,5 +7,5 @@ bs4
 mammoth
 python-docx
 openai
-cryptography
+pycryptodome
 dotenv
