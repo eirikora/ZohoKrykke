@@ -258,6 +258,7 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
             pass
         else:
             encrypted_openai_key = req_body.get('openai_key')
+    logging.info(f'GOT openai key:{encrypted_openai_key}')
     openai_key = decrypt_word(encrypted_openai_key)
 
     vstore_id = req.params.get('vstore_id')
@@ -273,13 +274,20 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
     if not file_name:
         try:
             req_body = req.get_json()
+            file_name = req_body.get('file_name')
         except ValueError:
             pass
-        else:
-            file_name = req_body.get('file_name')
+
+    logging.info(f'GOT file_name:{file_name}')
 
     file_content = b''
-    if 'content' not in req.files:
+    file_content = req.params.get('file_content')
+    if 'content' in req.files:
+        logging.info('We have a request with files attached.')
+        file = req.files['content']
+        file_content = file.read()
+        file_name = file.filename
+    if len(file_content) == 0:
         try:
             logging.info('Getting the body...')
             req_body = req.get_body()
@@ -303,11 +311,7 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
             return func.HttpResponse('ERROR: No file part in the request', mimetype="text/plain;charset=UTF-8", status_code=400)
         #return 'No file part in the request', 400
         #return func.HttpResponse(str(req_body[0:100]), mimetype="text/plain;charset=UTF-8", status_code=400)
-    else:
-        logging.info('We have a request with files attached.')
-        file = req.files['content']
-        file_content = file.read()
-        file_name = file.filename
+
     if openai_key and vstore_id and file_name:
         logging.info("Connecting to OpenAI with supplied key.")
         try:
