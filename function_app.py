@@ -233,3 +233,109 @@ def MakeVectorstore(req: func.HttpRequest) -> func.HttpResponse:
              "Please pass a valid openai_key and vstore_name in the request parameters or body",
              status_code=400
         )
+    
+
+@app.route(route="AddTextdocVectorstore", auth_level=func.AuthLevel.ANONYMOUS)
+def AddTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('AddTextdocVectorstore trigger function processed a request.')
+    logging.info(f'REQUEST PARAMS:{req.params}')
+    logging.info(f'REQUEST FILES:{req.files.keys()}')
+
+
+    openai_key = req.params.get('openai_key')
+    if not openai_key:
+        try:
+            req_body = req.get_json()
+        except ValueError:
+            pass
+        else:
+            openai_key = req_body.get('openai_key')
+
+    vstore_id = req.params.get('vstore_id')
+    if not vstore_id:
+        try:
+            req_body = req.get_json()
+        except ValueError:
+            pass
+        else:
+            vstore_id = req_body.get('vstore_id')
+    
+    file_name = req.params.get('file_name')
+    if not file_name:
+        try:
+            req_body = req.get_json()
+        except ValueError:
+            pass
+        else:
+            file_name = req_body.get('file_name')
+
+    file_content = b''
+    if 'content' not in req.files:
+        try:
+            logging.info('Getting the body...')
+            req_body = req.get_body()
+            req_body_str = req_body.decode('utf-8')
+            logging.info(f'Looking at:{req_body_str}')
+            if req_body_str.startswith('{'):
+                logging.info('Getting the json body...')
+                json_data = json.loads(req_body, strict=False)
+                logging.info('Getting the json content field...')
+                encoded_content = json_data["parameters"]["body"]["$content"]
+                # Decode the content
+                logging.info('Decoding the json body...')
+                file_content = base64.b64decode(encoded_content)
+            else:
+                logging.info("NO JSON HERE")
+                file_content = req_body_str
+            
+        except ValueError:
+            logging.info('ERROR: No file part in the request.')
+            #file_content = req.get_body()
+            return func.HttpResponse('ERROR: No file part in the request', mimetype="text/plain;charset=UTF-8", status_code=400)
+        #return 'No file part in the request', 400
+        #return func.HttpResponse(str(req_body[0:100]), mimetype="text/plain;charset=UTF-8", status_code=400)
+    else:
+        logging.info('We have a request with files attached.')
+        file = req.files['content']
+        file_content = file.read()
+        file_name = file.filename
+    if openai_key and vstore_id:
+        logging.info("Connecting to OpenAI with supplied key.")
+        try:
+            OpenAIclient = openai.OpenAI(api_key=openai_key)
+        except Exception as e:
+            return func.HttpResponse( f"Failed to connect to OpenAI with supplied key: {e}",
+             status_code=400
+            )
+        logging.info(f'Connecting to vector store. {vstore_id}')
+        try:
+            vector_store = OpenAIclient.beta.vector_stores.retrieve(
+                vector_store_id=vstore_id
+            )
+        except Exception as e:
+            # Try to extract the error message from the response if available
+            try:
+                error_detail = e.response.json().get('error', {}).get('message', '')
+            except Exception:
+                error_detail = ''
+            # Fallback to the full exception string if no nested error message is found
+            if not error_detail:
+                error_detail = str(e)
+
+            return func.HttpResponse( f"Failed to identify vector store {vstore_id} with message: {error_detail}",
+             status_code=400
+            )
+        logging.info(f"Found vector store with ID:{vector_store.id}")
+        return_value = {
+            "status": vector_store.status,
+            "id": vector_store.id,
+            "name": vector_store.name,
+            "file_name": file_name,
+            "file_content": file_content
+        }
+        return func.HttpResponse(json.dumps(return_value), mimetype="application/json", status_code=200)
+    else:
+        return func.HttpResponse(
+             "Please pass a valid openai_key and vstore_name in the request parameters or body",
+             status_code=400
+        )
