@@ -308,7 +308,7 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
         file = req.files['content']
         file_content = file.read()
         file_name = file.filename
-    if openai_key and vstore_id:
+    if openai_key and vstore_id and file_name:
         logging.info("Connecting to OpenAI with supplied key.")
         try:
             OpenAIclient = openai.OpenAI(api_key=openai_key)
@@ -383,7 +383,7 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(json.dumps(return_value), mimetype="application/json", status_code=200)
     else:
         return func.HttpResponse(
-             "Please pass a valid openai_key and vstore_name in the request parameters or body",
+             "Please pass a valid openai_key, vstore_id and file_name in the request parameters or body",
              status_code=400
         )
 

@@ -1,6 +1,7 @@
 import os
 import base64
 import hashlib
+import urllib.parse
 from Crypto.Cipher import AES
 
 # Navn på miljøvariabel der vi oppbevarer passordfrasen.
@@ -74,7 +75,9 @@ def decrypt_word(encrypted_api_key: str) -> str:
         iv_bytes = IV_STRING.encode("ascii")
 
         # 4) Base64-dekod ciphertext fra Zoho
-        cipher_bytes = base64.b64decode(encrypted_api_key)
+        URLdecoded_key = urllib.parse.unquote(encrypted_api_key)
+        print(URLdecoded_key)
+        cipher_bytes = base64.b64decode(URLdecoded_key)
 
         # 5) Dekrypter med AES i CBC-modus
         cipher = AES.new(key_32, AES.MODE_CBC, iv_bytes)
