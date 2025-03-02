@@ -279,15 +279,23 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
             pass
 
     # logging.info(f'GOT file_name:{file_name}')
-
-    file_content = b''
+    file_length = 0
     file_content = req.params.get('file_content')
     if 'content' in req.files:
         logging.info('We have a request with files attached.')
-        file = req.files['content']
-        file_content = file.read()
-        file_name = file.filename
-    if len(file_content) == 0:
+        uploaded_file = req.files['content']
+        file_content = uploaded_file.read()  # This should be bytes
+        file_name = uploaded_file.filename
+        if file_content is None:
+            file_length = 0
+        else:  
+            file_length = len(file_content)
+        logging.info(f"Read {file_length} bytes from request content/attachment '{file_name}'.")
+    if file_content is None:
+        file_length = 0
+    else:  
+        file_length = len(file_content)
+    if file_length == 0:
         try:
             logging.info('Getting the body...')
             req_body = req.get_body()
@@ -360,9 +368,19 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
 
         logging.info(f"Adding new file to vector store with ID:{vector_store.id}")
 
+        logging.info(f"NEW FILE NAME: {file_name}")
+        logging.info(f"FILE CONTENT:{file_content[:80]}")
+
         # Opprett et fil-lignende objekt i minnet
-        file_object = io.BytesIO(file_content.encode('utf-8'))
+        if isinstance(file_content, bytes):
+            # If it's already bytes, just wrap it
+            file_object = io.BytesIO(file_content)
+        else:
+            # Otherwise assume it's a string and encode to bytes
+            file_object = io.BytesIO(file_content.encode('utf-8'))
         file_object.name = file_name  # Sett filnavnet
+
+        logging.info(f"Uploading new file: {file_name}")
 
         # Last filen inn til OpenAI og få file_id
         OpenAIfile = OpenAIclient.files.create(
@@ -370,19 +388,20 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
             purpose='assistants'
         )
 
+        logging.info(f"Linking this file to vector store: {file_name}")
         # Last filen videre inn i Vectorstore
         vector_store_file = OpenAIclient.beta.vector_stores.files.create(
             vector_store_id=vector_store.id,
             file_id=OpenAIfile.id
         )
 
+        logging.info(f"COMPLETED Linking this file to vector store: {file_name} and got status {vector_store_file.status}")
         return_value = {
             "status": vector_store_file.status,
             "vectorstore_id": vector_store.id,
             "vectorstore_name": vector_store.name,
             "file_name": file_name,
-            "file_id": OpenAIfile.id,
-            "file_content": file_content
+            "file_id": OpenAIfile.id
         }
         return func.HttpResponse(json.dumps(return_value), mimetype="application/json", status_code=200)
     else:
