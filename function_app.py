@@ -135,16 +135,58 @@ def extract_header_footer(docx_path):
 def Word2Text(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Word2Text trigger function processed a request.')
 
+    """ # DEBUGGING
+    # Grab method, URL, and headers
+    method = req.method
+    url    = req.url
+    # Convert headers to a dict so you can log them as text
+    headers_dict = dict(req.headers)
+
+    # Get the body as bytes and decode to text with 'replace' to avoid errors if it's binary
+    body_bytes = req.get_body()
+    body_str   = body_bytes.decode("utf-8", errors="replace")
+
+    # Build a "flattened" string: method, URL, headers, and the first 1000 chars of the body
+    flattened_request_str = (
+        f"\n--- REQUEST DEBUG ---\n"
+        f"Method: {method}\n"
+        f"URL: {url}\n"
+        f"Headers: {headers_dict}\n"
+        f"Body (first 1000 chars): {body_str[:1000]}\n"
+        f"----------------------\n"
+    )
+
+    # Log it
+    logging.info(flattened_request_str)
+
+    # DEBUGGING """
+
     file_content = b''
     file_name = ''
-    if 'content' not in req.files:
+
+    for field in req.files.keys():
+        logging.info(f"DEBUG: Found req.files key: {field}")
+
+    if 'content' in req.files:
+        logging.info('Getting file from attached files...') # Typical for Zoho
+        file = req.files['content']
+        file_content = file.read()
+        file_name = file.filename
+    else:
         try:
-            logging.info('Getting the body...')
-            req_body = req.get_body()
-            json_data = json.loads(req_body, strict=False)
-            encoded_content = json_data["parameters"]["body"]["$content"]
+            logging.info('Getting file from the raw body...') # Typical for Power Automate
+            file_content = req.get_body()
+
+            #DEBUG
+            # Dekode til tekst, bytt ut evt. ugyldige tegn
+            #body_str = req_body.decode('utf-8', errors='replace')
+            # Logg en begrenset del av body (f.eks. 400 tegn)
+            #logging.info(f"First 400 characters of request body:\n{body_str[:400]}")
+
+            #json_data = json.loads(req_body, strict=False)
+            #encoded_content = json_data["body"]["$content"]
             # Decode the content
-            file_content = base64.b64decode(encoded_content)
+            #file_content = base64.b64decode(encoded_content)
             file_name = "powerapp.docx"
         except ValueError:
             logging.info('ERROR: No file part in the request.')
@@ -152,10 +194,6 @@ def Word2Text(req: func.HttpRequest) -> func.HttpResponse:
             return func.HttpResponse('ERROR: No file part in the request', mimetype="text/plain;charset=UTF-8", status_code=400)
         #return 'No file part in the request', 400
         #return func.HttpResponse(str(req_body[0:100]), mimetype="text/plain;charset=UTF-8", status_code=400)
-    else:
-        file = req.files['content']
-        file_content = file.read()
-        file_name = file.filename
 
     # Expect a Word filename to attempt convert
     if allowed_file(file_name):
@@ -272,32 +310,56 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('UpsertTextdocVectorstore trigger function processed a request.')
     # logging.info(f'REQUEST PARAMS:{req.params}')
     # logging.info(f'REQUEST FILES:{req.files.keys()}')
+    
+    """ # DEBUGGING
+    # Grab method, URL, and headers
+    method = req.method
+    url    = req.url
+    # Convert headers to a dict so you can log them as text
+    headers_dict = dict(req.headers)
 
+    # Get the body as bytes and decode to text with 'replace' to avoid errors if it's binary
+    body_bytes = req.get_body()
+    body_str   = body_bytes.decode("utf-8", errors="replace")
+
+    # Build a "flattened" string: method, URL, headers, and the first 1000 chars of the body
+    flattened_request_str = (
+        f"\n--- REQUEST DEBUG ---\n"
+        f"Method: {method}\n"
+        f"URL: {url}\n"
+        f"Headers: {headers_dict}\n"
+        f"Body (first 1000 chars): {body_str[:1000]}\n"
+        f"----------------------\n"
+    )
+
+    # Log it
+    logging.info(flattened_request_str)
+
+    # DEBUGGING """
 
     encrypted_openai_key = req.params.get('openai_key')
     if not encrypted_openai_key:
         try:
-            req_body = req.get_json()
+            req_body = req.get_json().get('body')
+            encrypted_openai_key = req_body.get('openai_key')
         except ValueError:
             pass
-        else:
-            encrypted_openai_key = req_body.get('openai_key')
+            
     # logging.info(f'GOT openai key:{encrypted_openai_key}')
     openai_key = decrypt_word(encrypted_openai_key)
 
     vstore_id = req.params.get('vstore_id')
     if not vstore_id:
         try:
-            req_body = req.get_json()
+            req_body = req.get_json().get('body')
+            vstore_id = req_body.get('vstore_id')
         except ValueError:
             pass
-        else:
-            vstore_id = req_body.get('vstore_id')
     
     file_name = req.params.get('file_name')
     if not file_name:
         try:
-            req_body = req.get_json()
+            req_body = req.get_json().get('body')
             file_name = req_body.get('file_name')
         except ValueError:
             pass
@@ -329,10 +391,10 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
                 logging.info('Getting the json body...')
                 json_data = json.loads(req_body, strict=False)
                 logging.info('Getting the json content field...')
-                encoded_content = json_data["parameters"]["body"]["$content"]
+                file_content = json_data["body"]["file_content"]
                 # Decode the content
-                logging.info('Decoding the json body...')
-                file_content = base64.b64decode(encoded_content)
+                # logging.info('Decoding the json body...')
+                # file_content = base64.b64decode(encoded_content)
             else:
                 logging.info("NO JSON HERE")
                 file_content = req_body_str
@@ -343,6 +405,10 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
             return func.HttpResponse('ERROR: No file part in the request', mimetype="text/plain;charset=UTF-8", status_code=400)
         #return 'No file part in the request', 400
         #return func.HttpResponse(str(req_body[0:100]), mimetype="text/plain;charset=UTF-8", status_code=400)
+    
+    #logging.info(f"openai_key:{openai_key}")
+    #logging.info(f"vstore_id:{vstore_id}")
+    #logging.info(f"file_name:{file_name}")
 
     if openai_key and vstore_id and file_name:
         logging.info("Connecting to OpenAI with supplied key.")
