@@ -97,7 +97,7 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) < 3:
-        print("Bruk: python script.py <encrypt|decrypt> <tekst>")
+        print("Bruk: python encryption.py <encrypt|decrypt> <tekst>")
         sys.exit(1)
 
     command = sys.argv[1]

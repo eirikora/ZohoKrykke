@@ -42,6 +42,30 @@ def http_test(req: func.HttpRequest) -> func.HttpResponse:
              status_code=200
         )
     
+@app.route(route="EncryptWord", auth_level=func.AuthLevel.ANONYMOUS)
+def encrypt_word_function(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('EncryptWord trigger function processed a request.')
+
+    # 1) Hent parameteren "secretword" fra query eller body
+    secretword = req.params.get('secretword')
+    if not secretword:
+        try:
+            req_body = req.get_json()
+        except ValueError:
+            req_body = {}
+        secretword = req_body.get('secretword')
+
+    if not secretword:
+        return func.HttpResponse(
+            "Please pass a 'secretword' either in querystring ?secretword=XXX or in JSON body {\"secretword\":\"XXX\"}.",
+            status_code=400
+        )
+
+    # 2) Kall din funksjon for å kryptere
+    result = encrypt_word(secretword)
+
+    # 3) Returner kryptert streng til klienten
+    return func.HttpResponse(result, status_code=200)
 
 def decode_mime_string(s):
     if '=' in s:
