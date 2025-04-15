@@ -363,6 +363,9 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
             file_name = req_body.get('file_name')
         except ValueError:
             pass
+    # file_name extension MUST be lowercase for OpenAI
+    name, ext = os.path.splitext(file_name)
+    file_name = name + ext.lower()
 
     # logging.info(f'GOT file_name:{file_name}')
     file_length = 0
@@ -468,7 +471,7 @@ def UpsertTextdocVectorstore(req: func.HttpRequest) -> func.HttpResponse:
         else:
             # Otherwise assume it's a string and encode to bytes
             file_object = io.BytesIO(file_content.encode('utf-8'))
-        file_object.name = file_name  # Sett filnavnet
+        file_object.name = file_name  # Sett filnavnet (OpenAI only accepts lowercase name)
 
         logging.info(f"Uploading new file: {file_name}")
 
