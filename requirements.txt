@@ -10,7 +10,7 @@
 #dotenv
 
 azure-functions
-openai
+openai==1.65.5
 mammoth
 beautifulsoup4
 python-docx
