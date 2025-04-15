@@ -2,10 +2,17 @@
 # The Python Worker is managed by Azure Functions platform
 # Manually managing azure-functions-worker may cause unexpected issues
 
+#azure-functions
+#bs4
+#mammoth
+#python-docx
+#openai
+#pycryptodome
+#dotenv
+
 azure-functions
-bs4
-mammoth
-python-docx
 openai
-pycryptodome
-dotenv
+mammoth
+beautifulsoup4
+python-docx
+python-dotenv
