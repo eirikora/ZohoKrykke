@@ -113,7 +113,7 @@ def allowed_file(filename):
     ALLOWED_EXTENSIONS = {'doc', 'docx'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def extract_header_footer_first_page(docx_path):
+def extract_header_footer(docx_path):
     """
     Load a .docx file and extract the header and footer from the first page only.
 

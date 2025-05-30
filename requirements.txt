@@ -2,13 +2,6 @@
 # The Python Worker is managed by Azure Functions platform
 # Manually managing azure-functions-worker may cause unexpected issues
 
-#azure-functions
-#bs4
-#mammoth
-#python-docx
-#openai
-#dotenv
-
 azure-functions
 openai==1.65.5
 mammoth

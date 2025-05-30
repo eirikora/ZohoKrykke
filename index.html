@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8" />
+<title>Konsulent-tilgjengelighet</title>
+<style>
+  body  {font-family:Segoe UI,Arial,sans-serif;margin:1rem;}
+  #status{color:gray}
+  pre   {white-space:pre-wrap;border:1px solid #ddd;padding:.5rem;margin-top:.5rem}
+</style>
+</head>
+<body>
+  <h2>Tilgjengelige konsulenter</h2>
+  <span id="status">Laster …</span>
+  <pre id="out" style="display:none"></pre>
+
+<script>
+(async () => {
+  const status = document.getElementById('status');
+  const out    = document.getElementById('out');
+
+  try {
+    const r = await fetch(
+      'https://a2pipeline.azurewebsites.net/api/konsulenttilgjengelighet',
+      { headers: { Authorization: 'Bearer guest@a2norge' } }
+    );
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+
+    out.textContent = await r.text();      //  ← eneste virkelige endringen
+    status.remove();
+    out.style.display = '';
+  } catch (e) {
+    status.textContent = 'Feil ved henting: ' + e.message;
+  }
+})();
+</script>
+</body>
+</html>
